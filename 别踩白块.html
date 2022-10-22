@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="./css/block.css">
+</head>
+
+<body>
+    <!-- 统计分数的文本框 -->
+    <input type="text" id="score" value="0" disabled="disabled" />
+
+
+    <div class="box">
+
+        <div class="game">
+            <div class="row">
+                <div class="black"></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+            <div class="row">
+                <div></div>
+                <div class="black"></div>
+                <div></div>
+                <div></div>
+            </div>
+            <div class="row">
+                <div></div>
+                <div></div>
+                <div class="black"></div>
+                <div></div>
+            </div>
+            <div class="row">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div class="black"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        // 游戏区域对象，定义一个游戏区域构造函数
+        function Game() {
+            // 定义属性
+            this.gameDom = document.querySelector('.game');
+            // 游戏区域下落的速度
+            this.speed = 1;
+            // 分数
+            this.score = 0;
+            // 分数文本框
+            this.scoreInput = document.querySelector("#score");
+            // 定义标识符
+            this.timer = null;
+            // 定义一个属性， 保存游戏状态
+            this.isOver = false;
+            // 调用初始化方法
+            this.init();
+        }
+        // 使用构造函数的原型对象添加方法
+
+        // 游戏区域下落方法
+        Game.prototype.moveDown = function () {
+            // window.setInterval(() => {
+            //     // this指向指向window的解决办法1
+            //     this.gameDown.style.top = this.gameDown.offsetTop + this.speed + 'px'
+            // }, 20)
+
+            // window.setInterval(function () {
+            //     // this指向指向window的解决办法2
+            //     this.gameDown.style.top = this.gameDown.offsetTop + this.speed + 'px'
+            // }.bind(this), 20)
+
+            // 缓存this, 因为定时器外面的this指向的是new 的实例对象
+            let that = this;
+
+            // 开启定时器
+            this.timer = window.setInterval(function () {
+                // console.log(that);
+                // this指向指向window的解决办法3
+
+                // 游戏区域下移
+                that.gameDom.style.top = that.gameDom.offsetTop + that.speed + 'px'
+
+                if (that.gameDom.offsetTop >= 0) {
+                    // 调用添加一行的方法
+                    that.createRow();
+                    // 调用生成删除一行的方法
+                    that.removeRow();
+                    // 游戏预期触底后，最后一行是否点击过，未点击过，需要结束游戏
+                    that.isTouchBottom();
+                }
+            }, 20);
+        }
+
+        // 在最前面添加一行的方法
+        Game.prototype.createRow = function () {
+            // 创建新的一行
+            let newRow = document.createElement('div');
+
+            // 设置行的类名
+            newRow.className = 'row';
+
+            // 得到1~4之间的随机数
+            let randomNum = Math.floor(Math.random() * (4 - 1 + 1) + 1);
+
+
+            // 创建4个列
+            for (let i = 0; i < 4; i++) {
+                // 创建列
+                let newCol = document.createElement('div');
+                if (i == randomNum) {   // 判断i 是否等于随机1-4之间的整数
+                    newCol.classList.add('black');
+                }
+                newRow.appendChild(newCol);
+            }
+
+            // 把新的一行加到游戏区域最前面
+            this.gameDom.insertBefore(newRow, this.gameDom.firstElementChild);
+
+            // 无缝下落
+            this.gameDom.style.top = '-100px';
+        }
+
+        // 删除最后一行的方法
+        Game.prototype.removeRow = function () {
+            // 如果当前游戏区域行数超过5， 删除最后一行
+            if (this.gameDom.children.length > 5) {
+                this.gameDom.lastElementChild.remove();
+            }
+        }
+
+        // 游戏区域点击被点击的方法
+        Game.prototype.handleClick = function () {
+            // 缓慢this
+            var that = this;
+
+            // 给game绑定点击事件
+            this.gameDom.onclick = function (e) {
+                e = e || window.event;
+
+                if (that.isOver) {// 如果游戏已经结束
+                    alert("游戏已经结束,请刷新页面重新开始!");
+
+                } else {// 游戏正在运行中
+                    if (e.target.classList.contains("black")) {// 如果点击的是黑块
+                        // 删除类名
+                        e.target.classList.remove("black");
+                        // 分数加1
+                        that.score++;
+                        // 设置分数值
+                        that.scoreInput.value = that.score;
+                        // 给当前被点击黑块的父元素添加一个自定义属性
+                        e.target.parentNode.setAttribute("data-pass", "已经点击");
+                        // 每5分,加速一次
+                        if (that.score % 5 == 0) {
+                            that.speed++;
+                        }
+                    } else {// 如果点击的是白块
+                        alert("游戏结束");
+                        // 清除定时器
+                        window.clearInterval(that.timer);
+                        // 改变游戏状态
+                        that.isOver = true;
+                    }
+                }
+            }
+        }
+
+        // 判断触底的时候，最后一行的黑块是否已经被点击过
+        Game.prototype.isTouchBottom = function () {
+            if (this.gameDom.lastElementChild.getAttribute("data-pass") === null) {
+                alert("游戏结束, 5s后自动刷新");
+                // 清除定时器
+                window.clearInterval(this.timer);
+
+                 //页面自动刷新定时器
+                setTimeout(function () {
+                    // 自动刷新代码
+                    window.location.reload();
+                }, 5000)
+                // 改变游戏状态
+                this.isOver = true;
+            }
+        }
+
+        // 初始化函数
+        Game.prototype.init = function () {
+            // 调用游戏区域下落的方法
+            this.moveDown();
+            // 调用游戏区域被点击的方法
+            this.handleClick();
+        }
+
+        // 创建一个实例
+        new Game();
+    </script>
+</body>
+
+</html>
